@@ -1,0 +1,118 @@
+openapi: 3.1.0
+info:
+  title: Agent Workspace Sandbox Management
+  version: 0.2.0
+  description: Local admin session and CSRF protection apply to every route.
+servers:
+  - url: http://127.0.0.1:30207/api/v1
+paths:
+  /sandboxes:
+    get:
+      summary: List sandbox metadata
+      responses:
+        '200':
+          description: Sandbox list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Sandbox' }
+    post:
+      summary: Start a sandbox
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              additionalProperties: false
+              properties:
+                name: { type: string, minLength: 1, maxLength: 80 }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task: { $ref: '#/components/schemas/Sandbox' }
+  /sandboxes/{id}:
+    parameters:
+      - $ref: '#/components/parameters/id'
+    get:
+      summary: Inspect a sandbox and its Pi Web readiness
+      responses:
+        '200':
+          description: Detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task: { $ref: '#/components/schemas/Sandbox' }
+                  ready: { type: boolean }
+                  running: { type: boolean }
+                  webUrl: { type: [string, 'null'] }
+                  containerState: { type: string, description: 'Docker state, missing, or unknown on probe failure; autonomous sandboxes only.' }
+                  observedAt: { type: string, format: date-time }
+                  errorCode: { type: [string, 'null'] }
+    delete:
+      summary: Delete sandbox containers, network and private configuration/files
+      responses:
+        '204': { description: Deleted }
+  /sandboxes/{id}/access:
+    parameters:
+      - $ref: '#/components/parameters/id'
+    get:
+      summary: Fetch Pi Web URL and independent password
+      responses:
+        '200':
+          description: Access details, no-store
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url, password]
+                properties:
+                  url: { type: string, format: uri }
+                  password: { type: string }
+  /sandboxes/{id}/stop:
+    parameters:
+      - $ref: '#/components/parameters/id'
+    post:
+      summary: Stop retained sandbox containers
+      responses:
+        '200': { description: Stopped }
+  /sandboxes/{id}/resume:
+    parameters:
+      - $ref: '#/components/parameters/id'
+    post:
+      summary: Resume original sandbox without changing its model configuration
+      responses:
+        '200': { description: Resumed }
+components:
+  parameters:
+    id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  schemas:
+    Sandbox:
+      type: object
+      required: [id, mode, displayName, status]
+      properties:
+        id: { type: string, format: uuid }
+        mode: { type: string, enum: [autonomous, legacy] }
+        displayName: { type: string }
+        status: { type: string, enum: [starting, idle, stopping, stopped, resuming, failed, deleting] }
+        modelConnectionId: { type: string, format: uuid, description: Legacy sandboxes only }
+        connectionName: { type: string, description: Legacy sandboxes only }
+        errorCode: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }

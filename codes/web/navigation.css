@@ -1,0 +1,2 @@
+.tab { display: inline-block; text-decoration: none; }
+.top-links{display:flex;align-items:center;gap:22px;margin-left:auto}.top-links a{color:#63716d;text-decoration:none;font-size:13px;font-weight:650;white-space:nowrap}.top-links a.active{color:#146e67}.top-links a:hover{text-decoration:underline}@media(max-width:700px){.top-links{gap:12px}.top-links a{font-size:12px}}

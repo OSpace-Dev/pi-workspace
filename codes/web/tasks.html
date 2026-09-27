@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>任务 | Agent Workspace</title>
+  <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/navigation.css">
+  <link rel="stylesheet" href="/tasks.css">
+  <link rel="stylesheet" href="/documents.css">
+  <script src="/tasks-main.js" type="module"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">A</span><span>Agent Workspace</span><span class="brand-divider"></span><span class="area-name">管理</span></div>
+    <nav class="top-links" aria-label="主导航"><a class="active" href="/tasks" aria-current="page">任务</a><a href="/sandboxes">沙箱</a><a href="/models/connections">模型管理</a></nav>
+    <button id="logout" class="quiet" type="button" hidden>退出登录</button>
+  </header>
+
+  <main id="workspace" class="workspace" hidden>
+    <section id="task-list-view" hidden>
+      <div class="page-heading"><div><p class="eyebrow">工作空间</p><h1>任务</h1></div><button id="create-task-open" class="primary" type="button">新建任务</button></div>
+      <div class="section-head"><h2>最近任务 <span id="task-count" class="count">0</span></h2><button id="refresh-tasks" class="quiet" type="button">刷新</button></div>
+      <div class="table-wrap"><table><thead><tr><th>任务 / 模型连接</th><th>状态</th><th>创建于</th><th class="actions-head">操作</th></tr></thead><tbody id="task-rows"></tbody></table></div>
+      <div id="tasks-empty" class="empty" hidden>尚无任务。</div>
+    </section>
+
+    <section id="task-detail-view" hidden>
+      <a class="back-link" href="/tasks">← 返回任务</a>
+      <div class="page-heading task-heading"><div><p class="eyebrow">Pi 任务</p><h1 id="task-title">任务</h1><p class="task-meta" id="task-meta"></p></div><div class="task-actions"><button id="stop-task" class="quiet" type="button" hidden>结束任务</button><button id="resume-task" class="primary" type="button" hidden>恢复任务</button><button id="delete-task-open" class="quiet danger-text" type="button">删除</button></div></div>
+      <div id="task-state" class="task-state"></div>
+      <div class="task-content">
+      <aside class="sources-panel" aria-label="任务资料"><div class="section-head"><h2>资料 <span id="source-count" class="count">0 / 10</span></h2></div><p id="source-total" class="source-total">0 / 300 KiB</p><ul id="source-list" class="source-list"></ul><p id="source-empty" class="muted">尚无资料</p><form id="upload-form" class="upload-form"><label for="source-files">TXT / Markdown</label><input id="source-files" type="file" accept=".txt,.md,.markdown" multiple required><button id="upload-sources" class="primary" type="submit">上传资料</button><p id="upload-error" class="form-error" role="alert"></p></form></aside>
+      <div class="qa-panel">
+      <section class="conversation" aria-label="问答记录"><div id="turns" class="turns"></div><div id="turns-empty" class="empty" hidden>尚无提问。</div></section>
+      <form id="prompt-form" class="prompt-form"><label for="prompt-input">提问</label><textarea id="prompt-input" rows="3" required maxlength="32000" placeholder="输入问题" aria-describedby="prompt-error"></textarea><div class="prompt-actions"><p id="prompt-error" class="form-error" role="alert"></p><button id="send-prompt" class="primary" type="submit">发送</button></div></form>
+      </div></div>
+    </section>
+    <p id="notice" class="notice" role="status" aria-live="polite"></p>
+  </main>
+
+  <main id="login-view" class="login-layout" hidden>
+    <div class="login-panel"><p class="eyebrow">Agent Workspace</p><h1>管理登录</h1><form id="login-form"><label for="admin-key">管理员密钥</label><input id="admin-key" type="password" required autocomplete="off"><button class="primary full" type="submit">登录</button></form><p id="login-error" class="form-error" role="alert"></p></div>
+  </main>
+
+  <dialog id="create-task-dialog" aria-labelledby="create-task-title"><form id="create-task-form" class="dialog-form"><div class="dialog-heading"><h2 id="create-task-title">新建 Pi 任务</h2><button type="button" class="close" data-close="create-task-dialog" aria-label="关闭">×</button></div><label for="task-connection">模型连接</label><select id="task-connection" name="connectionId" required></select><p class="form-error" data-error role="alert"></p><div class="dialog-actions"><button type="button" class="quiet" data-close="create-task-dialog">取消</button><button class="primary" type="submit">创建任务</button></div></form></dialog>
+  <dialog id="delete-task-dialog" aria-labelledby="delete-task-title"><div class="dialog-form"><div class="dialog-heading"><h2 id="delete-task-title">删除任务</h2><button type="button" class="close" data-close="delete-task-dialog" aria-label="关闭">×</button></div><p class="dialog-context">将删除此任务的资料原文、容器、工作目录、Pi 会话与全部问答记录。此操作无法恢复。</p><p class="form-error" id="delete-error" role="alert"></p><div class="dialog-actions"><button type="button" class="quiet" data-close="delete-task-dialog">取消</button><button id="delete-task-confirm" class="danger" type="button">确认删除</button></div></div></dialog>
+</body>
+</html>

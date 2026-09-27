@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>模型连接 | Agent Workspace</title>
+  <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/navigation.css">
+  <script src="/main.js" type="module"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">A</span><span>Agent Workspace</span><span class="brand-divider"></span><span class="area-name">管理</span></div>
+    <nav class="top-links" aria-label="主导航"><a href="/tasks">任务</a><a href="/sandboxes">沙箱</a><a class="active" href="/models/connections" aria-current="page">模型管理</a></nav>
+    <button id="logout" class="quiet" type="button" hidden>退出登录</button>
+  </header>
+
+  <main id="workspace" class="workspace" hidden>
+    <div class="page-heading">
+      <div><p class="eyebrow">模型管理</p><h1>模型连接</h1></div>
+      <button id="create-open" class="primary" type="button">新增连接</button>
+    </div>
+    <nav class="tabs" aria-label="模型管理视图">
+      <a class="tab" href="/models/connections" data-view="connections">连接</a>
+      <a class="tab" href="/models/origins" data-view="origins">批准目标</a>
+    </nav>
+    <section id="connections-view" class="view" aria-labelledby="connections-title">
+      <div class="section-head"><h2 id="connections-title">已保存连接 <span id="connection-count" class="count">0</span></h2><button id="refresh-connections" class="quiet" type="button">刷新</button></div>
+      <div class="table-wrap"><table><thead><tr><th>名称 / 模型</th><th>上游地址</th><th>状态</th><th>更新于</th><th class="actions-head">操作</th></tr></thead><tbody id="connection-rows"></tbody></table></div>
+      <div id="connections-empty" class="empty" hidden>尚无模型连接。</div>
+    </section>
+    <section id="origins-view" class="view" hidden aria-labelledby="origins-title">
+      <div class="section-head"><h2 id="origins-title">批准的 HTTPS 目标 <span id="origin-count" class="count">0</span></h2></div>
+      <form id="origin-form" class="inline-form"><label for="origin-input">Origin</label><input id="origin-input" type="url" required placeholder="https://api.example.com" autocomplete="off"><button class="primary" type="submit">批准目标</button></form>
+      <div class="table-wrap"><table><thead><tr><th>Origin</th><th>批准于</th></tr></thead><tbody id="origin-rows"></tbody></table></div>
+      <div id="origins-empty" class="empty" hidden>尚无批准目标。</div>
+    </section>
+    <p id="notice" class="notice" role="status" aria-live="polite"></p>
+  </main>
+
+  <main id="login-view" class="login-layout" hidden>
+    <div class="login-panel"><p class="eyebrow">Agent Workspace</p><h1>管理登录</h1><form id="login-form"><label for="admin-key">管理员密钥</label><input id="admin-key" type="password" required autocomplete="off"><button class="primary full" type="submit">登录</button></form><p id="login-error" class="form-error" role="alert"></p></div>
+  </main>
+
+  <dialog id="create-dialog" aria-labelledby="create-title"><form id="create-form" class="dialog-form"><div class="dialog-heading"><h2 id="create-title">新增模型连接</h2><button type="button" class="close" data-close="create-dialog" aria-label="关闭">×</button></div><label for="display-name">连接名称</label><input id="display-name" name="displayName" required maxlength="200" placeholder="例如：团队测试模型"><label for="base-url">Base URL</label><input id="base-url" name="baseUrl" type="url" required placeholder="https://api.example.com/v1"><label for="model-id">模型 ID</label><input id="model-id" name="modelId" required maxlength="200" placeholder="例如：example-model"><label for="credential">API 凭据</label><input id="credential" name="credential" type="password" required autocomplete="new-password"><p class="form-error" data-error></p><div class="dialog-actions"><button type="button" class="quiet" data-close="create-dialog">取消</button><button class="primary" type="submit">保存连接</button></div></form></dialog>
+  <dialog id="credential-dialog" aria-labelledby="credential-title"><form id="credential-form" class="dialog-form"><div class="dialog-heading"><h2 id="credential-title">更换凭据</h2><button type="button" class="close" data-close="credential-dialog" aria-label="关闭">×</button></div><p id="credential-target" class="dialog-context"></p><label for="new-credential">新 API 凭据</label><input id="new-credential" name="credential" type="password" required autocomplete="new-password"><p class="form-error" data-error></p><div class="dialog-actions"><button type="button" class="quiet" data-close="credential-dialog">取消</button><button class="primary" type="submit">更换凭据</button></div></form></dialog>
+  <dialog id="disable-dialog" aria-labelledby="disable-title"><div class="dialog-form"><div class="dialog-heading"><h2 id="disable-title">停用连接</h2><button type="button" class="close" data-close="disable-dialog" aria-label="关闭">×</button></div><p id="disable-target" class="dialog-context"></p><div class="dialog-actions"><button type="button" class="quiet" data-close="disable-dialog">取消</button><button id="disable-confirm" class="danger" type="button">确认停用</button></div></div></dialog>
+</body>
+</html>

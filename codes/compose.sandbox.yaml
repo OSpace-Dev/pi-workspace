@@ -1,0 +1,11 @@
+services:
+  runtime:
+    environment:
+      SANDBOX_IMAGE: ${PIWS_SANDBOX_IMAGE:-pi-web-trial:pi-0.87.1}
+      SANDBOX_GATEWAY_IMAGE: ${PIWS_SANDBOX_GATEWAY_IMAGE:-piws-sandbox-gateway:local-v1}
+      MANAGEMENT_NETWORK: ${PIWS_COMPOSE_PROJECT:-piws-sandbox-preview}_management
+      SANDBOX_SCOPE: ${PIWS_COMPOSE_PROJECT:-piws-sandbox-preview}
+
+  api:
+    environment:
+      PUBLIC_ORIGIN: ${PIWS_PUBLIC_ORIGIN:-http://127.0.0.1:30207}

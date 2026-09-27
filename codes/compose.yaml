@@ -1,0 +1,55 @@
+name: piws-control-dev
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: pi_workspace
+      POSTGRES_USER: pi_workspace
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - control
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pi_workspace -d pi_workspace"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  api:
+    build: .
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: pi_workspace
+      DB_USER: pi_workspace
+      DB_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    ports:
+      - "127.0.0.1:30200:3000"
+    volumes:
+      - ./src:/app/src:ro
+    networks:
+      - control
+    depends_on:
+      db:
+        condition: service_healthy
+    init: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+secrets:
+  postgres_password:
+    file: ./.local/postgres-password
+
+networks:
+  control:
+
+volumes:
+  postgres_data:

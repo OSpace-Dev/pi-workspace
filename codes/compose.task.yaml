@@ -1,0 +1,110 @@
+name: ${PIWS_COMPOSE_PROJECT:-piws-task-preview}
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: pi_workspace
+      POSTGRES_USER: pi_workspace
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password]
+    volumes:
+      - task_db:/var/lib/postgresql/data
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pi_workspace -d pi_workspace"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  proxy:
+    build: .
+    user: "${PIWS_APP_UID:-1000}:${PIWS_APP_GID:-1000}"
+    command: ["node", "src/model-proxy/management-server.ts"]
+    dns: [8.8.8.8]
+    environment:
+      DB_HOST: db
+      DB_NAME: pi_workspace
+      DB_USER: pi_workspace
+      DB_PASSWORD_FILE: /run/secrets/postgres_password
+      MASTER_KEY_FILE: /run/secrets/master_key
+      SERVICE_KEY_FILE: /run/secrets/service_key
+    secrets: [postgres_password, master_key, service_key]
+    networks: [data, management, task]
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    init: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  runtime:
+    build: .
+    command: ["node", "src/runtime-agent/server.ts"]
+    environment:
+      SERVICE_KEY_FILE: /run/secrets/service_key
+      TASK_DATA_DIR: ${PIWS_TASK_DATA_DIR}
+      TASK_DATA_HOST_DIR: ${PIWS_TASK_DATA_DIR}
+      TASK_IMAGE: ${PIWS_TASK_IMAGE:-piws-task-worker:0.87.1-local}
+      TASK_NETWORK: ${PIWS_COMPOSE_PROJECT:-piws-task-preview}_task
+    secrets: [service_key]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${PIWS_TASK_DATA_DIR}:${PIWS_TASK_DATA_DIR}
+    networks: [management, task]
+    init: true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER]
+    security_opt: ["no-new-privileges:true"]
+
+  api:
+    build: .
+    user: "${PIWS_APP_UID:-1000}:${PIWS_APP_GID:-1000}"
+    command: ["node", "src/api/management-server.ts"]
+    environment:
+      ADMIN_KEY_FILE: /run/secrets/admin_key
+      SERVICE_KEY_FILE: /run/secrets/service_key
+      MANAGEMENT_URL: http://proxy:3001
+      RUNTIME_URL: http://runtime:3002
+      PUBLIC_ORIGIN: ${PIWS_PUBLIC_ORIGIN:-http://127.0.0.1:30203}
+      DB_HOST: db
+      DB_NAME: pi_workspace
+      DB_USER: pi_workspace
+      DB_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [admin_key, service_key, postgres_password]
+    ports:
+      - "127.0.0.1:${PIWS_TASK_PORT:-30203}:3000"
+    networks: [management, data]
+    depends_on:
+      proxy:
+        condition: service_healthy
+      runtime:
+        condition: service_started
+    init: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+secrets:
+  postgres_password:
+    file: ${PIWS_ADMIN_SECRET_DIR}/postgres-password
+  master_key:
+    file: ${PIWS_ADMIN_SECRET_DIR}/master-key
+  admin_key:
+    file: ${PIWS_ADMIN_SECRET_DIR}/admin-key
+  service_key:
+    file: ${PIWS_ADMIN_SECRET_DIR}/service-key
+
+networks:
+  data:
+    internal: true
+  management:
+  task:
+    internal: true
+
+volumes:
+  task_db:

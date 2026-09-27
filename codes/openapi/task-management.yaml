@@ -1,0 +1,199 @@
+openapi: 3.1.0
+info:
+  title: Agent Workspace Local Task API
+  version: 0.1.0
+  description: Local single-instance task operations. No raw task tokens are returned.
+security:
+  - adminSession: []
+paths:
+  /api/v1/tasks:
+    get:
+      summary: List the most recent 100 tasks
+      responses:
+        '200':
+          description: Tasks ordered by creation time descending
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Task' }
+    post:
+      summary: Create and start a Pi task
+      parameters: [{ $ref: '#/components/parameters/Csrf' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [connectionId]
+              properties:
+                connectionId: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Started task
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskResult' }
+        '409': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/v1/tasks/{id}:
+    parameters: [{ $ref: '#/components/parameters/TaskId' }]
+    get:
+      summary: Read task and ordered turns
+      responses:
+        '200':
+          description: Task detail
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [task, turns]
+                properties:
+                  task: { $ref: '#/components/schemas/Task' }
+                  turns:
+                    type: array
+                    items: { $ref: '#/components/schemas/Turn' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Revoke and delete task resources and records
+      parameters: [{ $ref: '#/components/parameters/Csrf' }]
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/v1/tasks/{id}/prompt:
+    parameters: [{ $ref: '#/components/parameters/TaskId' }]
+    post:
+      summary: Ask a plain-text question and wait for final answer
+      parameters: [{ $ref: '#/components/parameters/Csrf' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                  minLength: 1
+                  description: At most 32768 UTF-8 bytes; whitespace-only text is rejected
+      responses:
+        '200':
+          description: Finished answer
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [turnId, answer]
+                properties:
+                  turnId: { type: integer }
+                  answer: { type: string }
+                  result:
+                    oneOf:
+                      - $ref: 'document-qa.yaml#/components/schemas/DocumentAnswer'
+                      - type: 'null'
+        '413': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '502': { $ref: '#/components/responses/Error' }
+  /api/v1/tasks/{id}/stop:
+    parameters: [{ $ref: '#/components/parameters/TaskId' }]
+    post:
+      summary: Revoke model access and stop retained environment
+      parameters: [{ $ref: '#/components/parameters/Csrf' }]
+      responses:
+        '200':
+          description: Stopped task; repeated stopping is idempotent
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskResult' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/v1/tasks/{id}/resume:
+    parameters: [{ $ref: '#/components/parameters/TaskId' }]
+    post:
+      summary: Resume retained container and session with fresh authorization
+      parameters: [{ $ref: '#/components/parameters/Csrf' }]
+      responses:
+        '200':
+          description: Resumed task
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskResult' }
+        '409': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    adminSession:
+      type: apiKey
+      in: cookie
+      name: piws_session_origin_hash
+      description: Actual cookie name contains the SHA-256 prefix of the public origin
+  parameters:
+    TaskId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Csrf:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      schema: { type: string }
+  responses:
+    Error:
+      description: Stable error code; no provider or Docker diagnostics
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: object
+                required: [code]
+                properties:
+                  code: { type: string }
+  schemas:
+    TaskResult:
+      type: object
+      required: [task]
+      properties:
+        task: { $ref: '#/components/schemas/Task' }
+    Task:
+      type: object
+      required: [id, modelConnectionId, connectionName, status, errorCode, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        modelConnectionId: { type: string, format: uuid }
+        connectionName: { type: string }
+        status:
+          type: string
+          enum: [starting, idle, answering, stopping, stopped, resuming, failed, deleting]
+        currentGrantId: { type: [string, 'null'], format: uuid }
+        renewAt: { type: [string, 'null'], format: date-time }
+        errorCode: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Turn:
+      type: object
+      required: [id, question, answer, status, errorCode, createdAt]
+      properties:
+        id: { type: integer }
+        question: { type: string }
+        answer: { type: [string, 'null'] }
+        status: { type: string, enum: [pending, succeeded, failed] }
+        errorCode: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+        sourceIds:
+          type: array
+          items: { type: string, format: uuid }
+        phase: { type: string, enum: [preparing, model, validating, completed, failed] }
+        result:
+          oneOf:
+            - $ref: 'document-qa.yaml#/components/schemas/DocumentAnswer'
+            - type: 'null'

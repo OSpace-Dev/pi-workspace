@@ -1,0 +1,8 @@
+services:
+  proxy:
+    command: ["node", "probes/document-qa/proxy-fixture.ts"]
+    volumes:
+      - ./probes:/app/probes:ro
+  api:
+    volumes:
+      - ./probes:/app/probes:ro

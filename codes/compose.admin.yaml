@@ -1,0 +1,87 @@
+name: ${PIWS_COMPOSE_PROJECT:-piws-admin-preview}
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: pi_workspace
+      POSTGRES_USER: pi_workspace
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    volumes:
+      - admin_data:/var/lib/postgresql/data
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pi_workspace -d pi_workspace"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  proxy:
+    build: .
+    user: "${PIWS_APP_UID:-1000}:${PIWS_APP_GID:-1000}"
+    command: ["node", "src/model-proxy/management-server.ts"]
+    dns:
+      - 8.8.8.8
+    environment:
+      DB_HOST: db
+      DB_NAME: pi_workspace
+      DB_USER: pi_workspace
+      DB_PASSWORD_FILE: /run/secrets/postgres_password
+      MASTER_KEY_FILE: /run/secrets/master_key
+      SERVICE_KEY_FILE: /run/secrets/service_key
+    secrets:
+      - postgres_password
+      - master_key
+      - service_key
+    networks:
+      - data
+      - management
+    depends_on:
+      db:
+        condition: service_healthy
+    init: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  api:
+    build: .
+    user: "${PIWS_APP_UID:-1000}:${PIWS_APP_GID:-1000}"
+    command: ["node", "src/api/management-server.ts"]
+    environment:
+      ADMIN_KEY_FILE: /run/secrets/admin_key
+      SERVICE_KEY_FILE: /run/secrets/service_key
+      MANAGEMENT_URL: http://proxy:3001
+      PUBLIC_ORIGIN: ${PIWS_PUBLIC_ORIGIN:-http://127.0.0.1:30201}
+    secrets:
+      - admin_key
+      - service_key
+    ports:
+      - "127.0.0.1:${PIWS_ADMIN_PORT:-30201}:3000"
+    networks:
+      - management
+    depends_on:
+      - proxy
+    init: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+secrets:
+  postgres_password:
+    file: ${PIWS_ADMIN_SECRET_DIR}/postgres-password
+  master_key:
+    file: ${PIWS_ADMIN_SECRET_DIR}/master-key
+  admin_key:
+    file: ${PIWS_ADMIN_SECRET_DIR}/admin-key
+  service_key:
+    file: ${PIWS_ADMIN_SECRET_DIR}/service-key
+
+networks:
+  data:
+    internal: true
+  management:
+
+volumes:
+  admin_data:

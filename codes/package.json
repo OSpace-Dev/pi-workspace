@@ -1,0 +1,29 @@
+{
+  "name": "pi-workspace-control-plane",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev:api": "nodemon --legacy-watch --watch src --ext ts --exec node src/api/server.ts",
+    "check": "tsc --noEmit",
+    "test:upstream-policy": "node --test src/model-proxy/upstream-policy.test.ts",
+    "test:https-transport": "node --test src/model-proxy/https-transport.test.ts",
+    "test:connection-store": "node --test src/model-proxy/connection-store.test.ts",
+    "test:task-grant-store": "node --test src/model-proxy/task-grant-store.test.ts",
+    "test:product-proxy": "node --test src/model-proxy/active-streams.test.ts src/model-proxy/pi-request.test.ts src/model-proxy/product-proxy.test.ts",
+    "test:task-runtime": "node --test src/api/task-store.test.ts"
+  },
+  "dependencies": {
+    "fastify": "^5.6.0",
+    "ipaddr.js": "2.5.0",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "@types/pg": "^8.15.5",
+    "nodemon": "^3.1.10",
+    "typescript": "^5.9.2"
+  }
+}

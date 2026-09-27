@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>沙箱 | Agent Workspace</title>
+  <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/navigation.css">
+  <link rel="stylesheet" href="/sandboxes.css">
+  <script src="/sandboxes-main.js" type="module"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">A</span><span>Agent Workspace</span><span class="brand-divider"></span><span class="area-name">管理</span></div>
+    <nav class="top-links" aria-label="主导航"><a href="/tasks">任务</a><a class="active" href="/sandboxes" aria-current="page">沙箱</a><a href="/models/connections">模型管理</a></nav>
+    <button id="logout" class="quiet" type="button" hidden>退出登录</button>
+  </header>
+  <main id="workspace" class="workspace" hidden>
+    <section id="sandbox-list-view" hidden>
+      <div class="page-heading"><div><p class="eyebrow">工作空间</p><h1>沙箱</h1></div><button id="create-sandbox-open" class="primary" type="button">启动新沙箱</button></div>
+      <div class="section-head"><h2>独立环境 <span id="sandbox-count" class="count">0</span></h2><button id="refresh-sandboxes" class="quiet" type="button">刷新</button></div>
+      <div class="table-wrap"><table><thead><tr><th>名称 / 类型</th><th>状态</th><th>创建于</th><th class="actions-head">操作</th></tr></thead><tbody id="sandbox-rows"></tbody></table></div>
+      <div id="sandboxes-empty" class="empty" hidden>尚无沙箱。</div>
+    </section>
+    <section id="sandbox-detail-view" hidden>
+      <a class="back-link" href="/sandboxes">← 返回沙箱</a>
+      <div class="page-heading sandbox-heading"><div><p class="eyebrow">Pi Web 沙箱</p><h1 id="sandbox-title">沙箱</h1><p id="sandbox-meta" class="sandbox-meta"></p></div><div class="sandbox-actions"><button id="stop-sandbox" class="quiet" type="button" hidden>停止</button><button id="resume-sandbox" class="primary" type="button" hidden>恢复</button><button id="delete-sandbox-open" class="quiet danger-text" type="button">删除</button></div></div>
+      <div id="sandbox-state" class="sandbox-state" role="status" aria-live="polite"></div>
+      <section class="sandbox-access" aria-labelledby="web-title"><div class="section-head"><h2 id="web-title">Pi Web</h2></div>
+        <div class="access-row"><span class="access-label">地址</span><span id="sandbox-url" class="access-value">—</span><button id="open-sandbox" class="primary" type="button" disabled>打开 Pi Web</button></div>
+        <div class="access-row"><label class="access-label" for="sandbox-password">访问密码</label><input id="sandbox-password" type="password" readonly value="" autocomplete="off" aria-label="Pi Web 访问密码"><button id="reveal-password" class="quiet" type="button">显示</button><button id="copy-password" class="quiet" type="button">复制</button></div>
+      </section>
+      <dl class="sandbox-facts"><div><dt>环境 ID</dt><dd id="sandbox-id"></dd></div><div><dt>创建时间</dt><dd id="sandbox-created"></dd></div><div><dt>模型配置</dt><dd id="sandbox-connection"></dd></div></dl>
+      <section aria-labelledby="probe-title"><div class="section-head"><h2 id="probe-title">容器探针</h2></div><dl class="sandbox-facts"><div><dt>容器</dt><dd id="probe-container">未知</dd></div><div><dt>Pi Web</dt><dd id="probe-web">未知</dd></div><div><dt>采集时间</dt><dd id="probe-time">—</dd></div></dl><p id="probe-error" class="form-error" role="status"></p></section>
+    </section>
+    <p id="notice" class="notice" role="status" aria-live="polite"></p>
+  </main>
+  <main id="login-view" class="login-layout" hidden><div class="login-panel"><p class="eyebrow">Agent Workspace</p><h1>管理登录</h1><form id="login-form"><label for="admin-key">管理员密钥</label><input id="admin-key" type="password" required autocomplete="off"><button class="primary full" type="submit">登录</button></form><p id="login-error" class="form-error" role="alert"></p></div></main>
+  <dialog id="create-sandbox-dialog" aria-labelledby="create-sandbox-title"><form id="create-sandbox-form" class="dialog-form"><div class="dialog-heading"><h2 id="create-sandbox-title">启动新沙箱</h2><button type="button" class="close" data-close="create-sandbox-dialog" aria-label="关闭">×</button></div><label for="sandbox-name">名称</label><input id="sandbox-name" name="name" required maxlength="80" placeholder="例如：代码实验"><p class="form-error" data-error role="alert"></p><div class="dialog-actions"><button type="button" class="quiet" data-close="create-sandbox-dialog">取消</button><button class="primary" type="submit">启动沙箱</button></div></form></dialog>
+  <dialog id="delete-sandbox-dialog" aria-labelledby="delete-sandbox-title"><div class="dialog-form"><div class="dialog-heading"><h2 id="delete-sandbox-title">删除沙箱</h2><button type="button" class="close" data-close="delete-sandbox-dialog" aria-label="关闭">×</button></div><p class="dialog-context">将删除容器、Pi 会话、工作文件、沙箱配置及凭据。此操作无法恢复。</p><p id="delete-sandbox-error" class="form-error" role="alert"></p><div class="dialog-actions"><button type="button" class="quiet" data-close="delete-sandbox-dialog">取消</button><button id="delete-sandbox-confirm" class="danger" type="button">确认删除</button></div></div></dialog>
+</body>
+</html>

@@ -1,0 +1,6 @@
+FROM pi-web-trial:pi-0.87.1
+
+COPY src/task-worker/worker.mjs /opt/piws/worker.mjs
+USER 10001:10001
+WORKDIR /workspace
+ENTRYPOINT ["node", "/opt/piws/worker.mjs"]

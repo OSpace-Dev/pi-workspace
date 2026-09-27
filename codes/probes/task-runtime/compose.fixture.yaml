@@ -1,0 +1,11 @@
+services:
+  proxy:
+    command: ["node", "probes/task-runtime/proxy-fixture.ts"]
+    volumes:
+      - ./probes:/app/probes:ro
+  api:
+    volumes:
+      - ./probes:/app/probes:ro
+  runtime:
+    volumes:
+      - ./probes:/app/probes:ro

@@ -1,0 +1,121 @@
+openapi: 3.1.0
+info:
+  title: Workspace document QA
+  version: 1.0.0
+  description: Local administrator API; extends task-management.yaml. Write requests require matching Origin and X-CSRF-Token.
+security:
+  - session: []
+paths:
+  /api/v1/tasks/{id}/sources:
+    parameters:
+      - $ref: '#/components/parameters/taskId'
+    get:
+      responses:
+        '200':
+          description: Ordered immutable source metadata, without text
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SourceMetadata'
+        '404': {description: Task not found}
+    post:
+      description: Atomic append; idle/stopped only. Maximum ten files, 100 KiB each, 300 KiB total including existing sources. No automatic retry.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [files]
+              properties:
+                files:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  items:
+                    type: object
+                    required: [name, base64]
+                    properties:
+                      name: {type: string, maxLength: 160, description: TXT/MD/Markdown filename; no paths or controls}
+                      base64: {type: string, contentEncoding: base64, description: Canonical base64 of strict UTF-8 original bytes}
+      responses:
+        '201': {description: Added items with SourceMetadata fields}
+        '400': {description: Invalid file name/format/encoding or empty data}
+        '404': {description: Task not found}
+        '409': {description: Duplicate name or task not idle/stopped}
+        '413': {description: Count/byte/request budget exceeded}
+  /api/v1/tasks/{id}/sources/{sourceId}:
+    parameters:
+      - $ref: '#/components/parameters/taskId'
+      - name: sourceId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      responses:
+        '200':
+          description: Immutable original decoded text
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  source:
+                    allOf:
+                      - $ref: '#/components/schemas/SourceMetadata'
+                      - type: object
+                        properties:
+                          text: {type: string}
+        '404': {description: Task/source not found or source belongs to another task}
+components:
+  securitySchemes:
+    session: {type: apiKey, in: cookie, name: piws_session_origin_hash, description: Cookie name suffix is the first 12 hex digits of SHA-256(publicOrigin)}
+  parameters:
+    taskId:
+      name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  schemas:
+    SourceMetadata:
+      type: object
+      required: [id, name, byteCount, sha256, createdAt]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        byteCount: {type: integer, minimum: 1, maximum: 102400}
+        sha256: {type: string, pattern: '^[a-f0-9]{64}$'}
+        createdAt: {type: string, format: date-time}
+    Citation:
+      type: object
+      required: [sourceId, fileName, quote, start, end, location]
+      properties:
+        sourceId: {type: string, format: uuid}
+        fileName: {type: string}
+        quote: {type: string, minLength: 1, maxLength: 2000}
+        start: {type: integer, minimum: 0, description: UTF-16 code unit offset inclusive}
+        end: {type: integer, minimum: 1, description: UTF-16 code unit offset exclusive}
+        location: {type: string}
+    DocumentAnswer:
+      type: object
+      required: [status, claims]
+      properties:
+        status: {type: string, enum: [answered, no_basis, conflict]}
+        claims:
+          type: array
+          minItems: 1
+          maxItems: 32
+          items:
+            type: object
+            required: [text, citations]
+            properties:
+              text: {type: string, minLength: 1, maxLength: 8000}
+              citations:
+                type: array
+                maxItems: 10
+                items: {$ref: '#/components/schemas/Citation'}

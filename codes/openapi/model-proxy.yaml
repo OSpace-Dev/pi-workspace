@@ -1,0 +1,126 @@
+openapi: 3.1.0
+info:
+  title: Internal Pi Model Proxy
+  version: 0.1.0
+  description: Local single-instance text-only Pi 0.87.1 contract. Not a public model API.
+paths:
+  /v1/chat/completions:
+    post:
+      operationId: streamCompletion
+      security: [{ taskToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompletionRequest'
+      responses:
+        '200':
+          description: Ordered OpenAI SSE events, including a normal DONE marker. Disconnect on interrupted stream.
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '400': { description: Invalid request fields or text messages }
+        '401': { description: Missing, expired, revoked, stopped or unavailable task authorization }
+        '403': { description: Model does not match the task connection }
+        '409': { description: Connection unavailable }
+        '413': { description: Request body exceeds 1 MiB }
+        '415': { description: Request must be application/json }
+        '429': { description: One stream per task or eight streams per process exceeded }
+        '500': { description: Internal failure without sensitive details }
+        '502': { description: Target rejected or upstream failure }
+        '503': { description: DNS unavailable }
+        '504': { description: Upstream first response or idle deadline exceeded }
+  /internal/tasks:
+    post:
+      operationId: createProxyTask
+      description: Control domain only. Creates model authorization state, not a running Pi container.
+      security: [{ serviceKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [connectionId]
+              properties:
+                connectionId: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Created; the random token is returned only in this response and must not reach a browser.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [taskId, grant]
+                properties:
+                  taskId: { type: string, format: uuid }
+                  grant:
+                    type: object
+                    required: [id, taskId, modelConnectionId, token, issuedAt, renewAt, expiresAt]
+                    properties:
+                      id: { type: string, format: uuid }
+                      taskId: { type: string, format: uuid }
+                      modelConnectionId: { type: string, format: uuid }
+                      token: { type: string, pattern: '^[A-Za-z0-9_-]{43}$' }
+                      issuedAt: { type: string, format: date-time }
+                      renewAt: { type: string, format: date-time }
+                      expiresAt: { type: string, format: date-time }
+        '400': { description: Invalid task input }
+        '401': { description: Service authorization failed }
+        '409': { description: Connection unavailable }
+  /internal/tasks/{id}/stop:
+    post:
+      operationId: stopProxyTask
+      security: [{ serviceKey: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Stopped; committed revocation and active upstream cancellation }
+        '400': { description: Invalid task ID }
+        '401': { description: Service authorization failed }
+        '404': { description: Unknown or already stopped task }
+components:
+  securitySchemes:
+    taskToken: { type: http, scheme: bearer }
+    serviceKey: { type: http, scheme: bearer }
+  schemas:
+    CompletionRequest:
+      type: object
+      additionalProperties: false
+      required: [model, messages, stream]
+      properties:
+        model: { type: string, description: Must equal the model ID of the bound connection }
+        stream: { const: true }
+        max_completion_tokens: { type: integer, minimum: 1, maximum: 4096, default: 4096 }
+        stream_options:
+          type: object
+          additionalProperties: false
+          required: [include_usage]
+          properties:
+            include_usage: { const: true }
+        messages:
+          type: array
+          minItems: 1
+          maxItems: 64
+          items:
+            type: object
+            additionalProperties: false
+            required: [role, content]
+            properties:
+              role: { enum: [system, developer, user, assistant] }
+              content:
+                oneOf:
+                  - { type: string }
+                  - type: array
+                    minItems: 1
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required: [type, text]
+                      properties:
+                        type: { const: text }
+                        text: { type: string }

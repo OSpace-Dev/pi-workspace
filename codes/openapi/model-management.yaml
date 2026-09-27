@@ -1,0 +1,143 @@
+openapi: 3.0.3
+info:
+  title: Agent Workspace local model management
+  version: 1.0.0-local
+servers:
+  - url: http://127.0.0.1:30201
+paths:
+  /api/v1/session:
+    get:
+      summary: Inspect the current local administrator session
+      responses:
+        '200':
+          description: Authentication state and CSRF token when authenticated
+  /api/v1/login:
+    post:
+      summary: Exchange the external administrator key for a short session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key]
+              properties:
+                key: { type: string, minLength: 1 }
+      responses:
+        '200': { description: HttpOnly SameSite session cookie and CSRF token }
+        '401': { description: Invalid key }
+        '429': { description: Too many failed attempts }
+  /api/v1/logout:
+    post:
+      summary: End the current session
+      security: [{ sessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/csrf' }]
+      responses:
+        '200': { description: Session ended }
+  /api/v1/origins:
+    get:
+      summary: List approved HTTPS origins
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Origins ordered by name }
+    post:
+      summary: Approve an HTTPS origin
+      security: [{ sessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/csrf' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [origin]
+              properties:
+                origin: { type: string, format: uri, example: 'https://api.example.com' }
+      responses:
+        '201': { description: Normalized origin; repeat approval is idempotent }
+        '422': { description: Invalid or unsafe origin }
+  /api/v1/connections:
+    get:
+      summary: List non-sensitive connection metadata
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Connections ordered by creation time }
+    post:
+      summary: Create a model connection after approved-origin and public-DNS checks
+      security: [{ sessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/csrf' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [displayName, baseUrl, modelId, credential]
+              properties:
+                displayName: { type: string, maxLength: 200 }
+                baseUrl: { type: string, format: uri, example: 'https://api.example.com/v1' }
+                modelId: { type: string, maxLength: 200 }
+                credential: { type: string, writeOnly: true, maxLength: 8192 }
+      responses:
+        '201': { description: Non-sensitive metadata and opaque concurrency version }
+        '422': { description: Unapproved or non-public target }
+        '503': { description: DNS unavailable }
+  /api/v1/connections/{id}/disable:
+    patch:
+      summary: Disable an enabled connection
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/id' }
+        - { $ref: '#/components/parameters/csrf' }
+      requestBody:
+        $ref: '#/components/requestBodies/version'
+      responses:
+        '200': { description: Updated metadata }
+        '409': { description: Stale version or connection unavailable }
+  /api/v1/connections/{id}/credential:
+    patch:
+      summary: Replace a connection credential
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/id' }
+        - { $ref: '#/components/parameters/csrf' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version, credential]
+              properties:
+                version: { type: string }
+                credential: { type: string, writeOnly: true, maxLength: 8192 }
+      responses:
+        '200': { description: Updated metadata without credential material }
+        '409': { description: Stale version or connection unavailable }
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: piws_session
+  parameters:
+    csrf:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      schema: { type: string }
+    id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  requestBodies:
+    version:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [version]
+            properties:
+              version: { type: string }

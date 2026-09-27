@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>原文 | Agent Workspace</title><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/navigation.css"><link rel="stylesheet" href="/tasks.css"><link rel="stylesheet" href="/documents.css"><script src="/source-main.js" type="module"></script></head>
+<body>
+  <header class="topbar"><div class="brand"><span class="brand-mark">A</span><span>Agent Workspace</span></div><nav class="top-links" aria-label="主导航"><a href="/tasks">任务</a><a href="/models/connections">模型管理</a></nav><button id="logout" class="quiet" type="button" hidden>退出登录</button></header>
+  <main id="workspace" class="workspace" hidden><a id="back-task" class="back-link" href="/tasks">← 返回任务</a><div class="page-heading"><div><p class="eyebrow">资料原文</p><h1 id="source-title">原文</h1><p id="source-meta" class="task-meta"></p></div></div><pre id="source-original" class="source-original"></pre><p id="notice" class="notice" role="status" aria-live="polite"></p></main>
+  <main id="login-view" class="login-layout" hidden><div class="login-panel"><p class="eyebrow">Agent Workspace</p><h1>管理登录</h1><form id="login-form"><label for="admin-key">管理员密钥</label><input id="admin-key" type="password" required autocomplete="off"><button class="primary full" type="submit">登录</button></form><p id="login-error" class="form-error" role="alert"></p></div></main>
+</body>
+</html>

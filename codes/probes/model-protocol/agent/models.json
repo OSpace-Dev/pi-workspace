@@ -1,0 +1,12 @@
+{
+  "providers": {
+    "probe": {
+      "baseUrl": "http://probe:4100/v1",
+      "api": "openai-completions",
+      "apiKey": "probe-token-a",
+      "models": [
+        { "id": "probe-a", "compat": { "supportsStore": false, "supportsReasoningEffort": false } }
+      ]
+    }
+  }
+}

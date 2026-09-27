@@ -1,0 +1,6 @@
+/refer/
+/codes/.local/
+/docs/testing/
+**/node_modules/
+.DS_Store
+Thumbs.db
